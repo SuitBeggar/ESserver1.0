@@ -1,0 +1,91 @@
+spring:
+  profiles:
+    active: local
+  application:
+    name: ESserver1.0
+server:
+  port: 9016     	    	
+logging:
+    config: classpath:logback-${spring.profiles.active}.xml  
+management:  
+  security:  
+    enabled: false # spring-boot 1.5.2之后严格执行安全策略，所以需要配置这个为false ,否则很多点监控不到  
+  health:
+    defaults:
+      enabled: false
+#    rabbit:
+#      enabled: true #只使用rabbit来做日志时，禁用健康检查   
+---
+mybatis:
+  mapperLocations: classpath*:mapper/*Dao.xml
+  executor-type: REUSE
+
+applications:
+ elasticsearch:   #ES集群配置
+    clustername: esdemo   #集群名称
+    clusternode: 127.0.0.1:9300   #节点（每个节点之间使用逗号分隔）
+ applicationlist: #应用集合（每一个集合代表一个应用系统）
+   -
+      indexname: nxyw_index    #索引名称（一个查询场景创建一个索引）
+      datasource:   #数据源
+         name: nxyw_datasource #数据源名称
+         url: jdbc:oracle:thin:@10.10.68.60:1521:argobj
+         username: prptest_nx
+         password: prptest_nx
+         driverclassname: oracle.jdbc.OracleDriver
+      indextypelist:  #索引类型（一个索引可以有多个类型）
+       -
+         name: case_index # 案件处理索引
+         primarysql: SELECT bdjyxxb.policyno, gzl.mainno as registno, gzl.id, gzl.processid, gzl.taskid, gzl.businessType, to_char(gzl.indate, 'yyyy-MM-dd HH24:mi') as indate,to_char(baxxb.damagedate, 'yyyy-MM-dd') as damagedate, to_char(baxxb.reportdate, 'yyyy-MM-dd') as reportDate, bdjyxxb.riskcode, bdjyxxb.insuredName, bdjyxxb.classcode, decode(lajbxxb.sumestipaid, null, 0, lajbxxb.sumestipaid) as sumClaim,latzxxb.claimflag as claimForce, decode(lajbxxb.caseType, 0, '注销', 1, '拒赔', null) as cancelType, gzl.caseTag, gzl.prepuser,bdjyxxb.comcode, bdjyxxb.customerlevel, gzl.state, gzl.businessid, gzl.businessno, bamxb.casename from nx_gzlglywzb_test gzl left join nx_baxxb baxxb on gzl.mainno=baxxb.registno left join nx_bamxb bamxb on gzl.mainno=bamxb.registno left join nx_lajbxxb lajbxxb on gzl.mainno=lajbxxb.registno left join nx_latzxxb latzxxb on lajbxxb.claimno=latzxxb.claimno left join nx_bamxb bamxb on gzl.mainno=bamxb.registno left join nx_bdjyxxb bdjyxxb on gzl.mainno=bdjyxxb.registno left join nx_gzljdb gzljdb on gzl.nodeid=gzljdb.id where gzl.id = '${primarykey}'    #主表sql
+         primarykey: id   #主键
+         primarykeysql: select id from nx_gzlglywzb_test where nodeid='20' #查询主键sql
+         incrementsql: select distinct mainno from nx_gzlglywzb where OPERATETIMEFORHIS &lt;= ${nowDate} and OPERATETIMEFORHIS &gt;= ${oldDate} UNION select REGISTNO AS registNo from prplclaim where OPERATETIMEFORHIS &lt;= ${nowDate} and OPERATETIMEFORHIS &gt;= ${oldDate} UNION select REGISTNO AS registNo from prplcompensate where OPERATETIMEFORHIS &lt;= ${nowDate} and OPERATETIMEFORHIS &gt;= ${oldDate}    #增量查询sql
+         timediffer: 1800000   #单位ms 1000*60*30   #增量同步数据时间间隔
+         scheduled: "0/50 * * * * ?"   #定时任务（必须与增量同步数据时间间隔相匹配）
+         syncswitch: false  #同步开关(增量)
+         syncthreadcount: 35  #同步线程数
+#         childsqlmap:   #子表集合
+#          - name: PRPCINSURED   #集合名称
+#            sql: select POLICYNO,INSUREDCODE,INSUREDNAME,IDENTIFYNUMBER from PRPCINSURED   #子表sql
+#            fk: POLICYNO  #外键
+         highfield: policyno,registno,claimno,riskcode  #高亮字段（搜索阶段使用）
+         analysfield:  #分词策略
+           - field: insuredName   #分词字段（查询字段，必须是查询结果集中的字段）
+             analyzer: standard  #分词器(数据同步时使用)（可选用ik_max_word...）
+             searchanalyzer: standard #分词器(数据搜索时使用)（可选用ik_max_word...）
+             
+#   -
+#      indexname: nxyw_index    #索引名称（一个查询场景创建一个索引）
+#      datasource:   #数据源
+#         name: nxyw_datasource #数据源名称
+#         url: jdbc:oracle:thin:@10.10.68.60:1521:argobj
+#         username: prptest_nx
+#         password: prptest_nx
+#         driverclassname: oracle.jdbc.driver.OracleDriver
+#      indextypelist:  #索引类型（一个索引可以有多个类型）
+#       -
+#         name: policy_index #索引类型名称
+#         primarysql: select POLICYNO AS policyNo,CLASSCODE AS classCode,RISKCODE AS riskCode,COMCODE AS comCode,APPLICODE AS appliCode,APPLINAME AS appliName,INSUREDCODE AS insuredCode,INSUREDNAME AS insuredName,OPERATEDATE AS operateDate,STARTDATE AS startDate,ENDDATE AS endDate,CURRENCY AS currency,BUSINESSPLATE AS businessPlate from PRPCMAIN where POLICYNO = ${primarykey}    #主表sql
+#         primarykey: POLICYNO   #主键
+#         primarykeysql: select POLICYNO from PRPCMAIN  #查询主键sql
+#         incrementsql: select distinct REGISTNO AS registNo from prpLwftaskin  where OPERATETIMEFORHIS &lt;= ${nowDate} and OPERATETIMEFORHIS &gt;= ${oldDate} UNION select REGISTNO AS registNo from prplclaim where OPERATETIMEFORHIS &lt;= ${nowDate} and OPERATETIMEFORHIS &gt;= ${oldDate} UNION select REGISTNO AS registNo from prplcompensate where OPERATETIMEFORHIS &lt;= ${nowDate} and OPERATETIMEFORHIS &gt;= ${oldDate}    #增量查询sql
+#         timediffer: 50000   #单位ms 1000*60*   #增量同步数据时间间隔
+#         scheduled: "0/50 * * * * ?"   #定时任务（必须与增量同步数据时间间隔相匹配）
+#         syncswitch: true  #同步开关(增量)
+#         syncthreadcount: 30  #同步线程数
+#         childsqlmap:   #子表集合
+#          - name: PRPCINSURED   #集合名称
+#            sql: select POLICYNO,INSUREDCODE,INSUREDNAME,IDENTIFYNUMBER from PRPCINSURED   #子表sql
+#            fk: POLICYNO  #外键
+#         highfield: POLICYNO,APPLINAME,INSUREDNAME  #高亮字段（搜索阶段使用）
+#         analysfield:  #分词策略
+#           - field: APPLINAME   #分词字段（查询字段，必须是查询结果集中的字段）
+#             analyzer: ik_smart  #分词器(数据同步时使用)（可选用ik_max_word...）
+#             searchanalyzer: ik_smart #分词器(数据搜索时使用)（可选用ik_max_word...）
+#           - field: INSUREDNAME
+#             analyzer: ik_smart
+#             searchanalyzer: ik_smart
+#           - field: PRPCINSURED.INSUREDNAME  #子表的字段，使用子表名称.子表字段名
+#             analyzer: ik_smart
+#             searchanalyzer: ik_smart
+ 

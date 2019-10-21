@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: ins.framework:ins-framework-mybatis:6.0.8-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/ins/framework/ins-framework-mybatis/6.0.8-SNAPSHOT/ins-framework-mybatis-6.0.8-20170925.120658-8.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/ins/framework/ins-framework-mybatis/6.0.8-SNAPSHOT/ins-framework-mybatis-6.0.8-20170925.120658-8-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/ins/framework/ins-framework-mybatis/6.0.8-SNAPSHOT/ins-framework-mybatis-6.0.8-20170925.120658-8-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
